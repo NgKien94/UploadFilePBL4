@@ -14,14 +14,20 @@ public class ServerMain {
             Socket socket = serverSocket.accept();
            System.out.println("Client connected");
 
-           BufferedInputStream serverRead = new BufferedInputStream(new FileInputStream(filePath));
+
+            // Dùng để đọc tên tệp
+           File file = new File(filePath);
+           BufferedInputStream serverRead = new BufferedInputStream(new FileInputStream(file));
 
            // Tao outputStream de gui du lieu di
            OutputStream outputStream = socket.getOutputStream();
 
+
            // DataOutputStream được sử dụng để tự chuyển các kieu nguyên thủy vào outputstream
 
            DataOutputStream dataOutputStream = new DataOutputStream(outputStream);
+           dataOutputStream.writeUTF(file.getName());
+           System.out.println("Gửi TÊN tệp hoàn tất.....");
 
           byte[] buffer = new byte[4096];
           int byteLength ;
