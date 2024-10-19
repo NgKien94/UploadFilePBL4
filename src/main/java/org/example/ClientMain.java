@@ -13,13 +13,13 @@ public class ClientMain {
             Socket socket = new Socket("localhost",9999);
 
             InputStream inputStream = socket.getInputStream();
-            DataInputStream dataInputStream = new DataInputStream(inputStream);// Dùng để nhận tên tệp
+            BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream));// Dùng để nhận tên tệp
 
 
 
 
 
-           String fileName = dataInputStream.readUTF();
+           String fileName = reader.readLine();
            System.out.println("Client nhận tên tệp : "+fileName);
 
 

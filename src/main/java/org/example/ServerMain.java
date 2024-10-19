@@ -5,8 +5,13 @@ import java.net.*;
 import java.util.*;
 
 public class ServerMain {
+
+
+
     public static void main(String[] args) {
-        String filePath = "D:\\Video Android\\testFileTCP.txt";
+        //String filePath = "D:\\Video Android\\testFileTCP.txt";
+      //  String filePath = "D:\\Video Android\\anh1.jpg";
+        String filePath = "D:\\Video Android\\MyCalculator.mp4";
        try{
             ServerSocket serverSocket = new ServerSocket(9999);
             System.out.println("Server created. Waiting for client.......");
@@ -23,10 +28,8 @@ public class ServerMain {
            OutputStream outputStream = socket.getOutputStream();
 
 
-           // DataOutputStream được sử dụng để tự chuyển các kieu nguyên thủy vào outputstream
-
-           DataOutputStream dataOutputStream = new DataOutputStream(outputStream);
-           dataOutputStream.writeUTF(file.getName());
+           PrintWriter printWriter = new PrintWriter(outputStream,true);
+           printWriter.println(file.getName());
            System.out.println("Gửi TÊN tệp hoàn tất.....");
 
           byte[] buffer = new byte[4096];
