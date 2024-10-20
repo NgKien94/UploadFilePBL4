@@ -1,51 +1,111 @@
 package org.example;
 
+import javax.swing.*;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 import java.io.*;
 import java.net.*;
 import java.util.*;
+import java.awt.*;
 
-public class ServerMain {
+public class ServerMain extends JFrame implements ActionListener {
+
+    public TextField txtPort, txtFile;
+    public JButton btnChoose, btnSend;
+    private File selectedFile;
+
+    public void GUI() {
+        JLabel labelPort;
+        JPanel pnTotal, pnTop, pnCenter;
+
+        labelPort = new JLabel("PORT: ");
+        txtPort = new TextField(15);
+        btnChoose = new JButton("Choose");
+        btnChoose.addActionListener(this);
+
+        txtFile = new TextField(15);
+        btnSend = new JButton("Send file");
+        btnSend.addActionListener(this);
 
 
+        pnTop = new JPanel(new FlowLayout(10));
+        pnCenter = new JPanel(new FlowLayout(40, 40, 40));
+        pnTotal = new JPanel(new BorderLayout());
+
+        pnTop.add(labelPort);
+        pnTop.add(txtPort);
+
+        pnCenter.add(btnChoose);
+        pnCenter.add(txtFile);
+        pnCenter.add(btnSend);
+
+        pnTotal.add(pnTop, BorderLayout.NORTH);
+        pnTotal.add(pnCenter, BorderLayout.CENTER);
+
+        add(pnTotal);
+        setBounds(200, 200, 500, 350);
+        setVisible(true);
+
+    }
+
+    public ServerMain(String st) {
+
+        super(st);
+        GUI();
+    }
 
     public static void main(String[] args) {
-        //String filePath = "D:\\Video Android\\testFileTCP.txt";
-      //  String filePath = "D:\\Video Android\\anh1.jpg";
-        String filePath = "D:\\Video Android\\MyCalculator.mp4";
-       try{
-            ServerSocket serverSocket = new ServerSocket(9999);
-            System.out.println("Server created. Waiting for client.......");
-
-            Socket socket = serverSocket.accept();
-           System.out.println("Client connected");
-
-
-            // Dùng để đọc tên tệp
-           File file = new File(filePath);
-           BufferedInputStream serverRead = new BufferedInputStream(new FileInputStream(file));
-
-           // Tao outputStream de gui du lieu di
-           OutputStream outputStream = socket.getOutputStream();
-
-
-           PrintWriter printWriter = new PrintWriter(outputStream,true);
-           printWriter.println(file.getName());
-           System.out.println("Gửi TÊN tệp hoàn tất.....");
-
-          byte[] buffer = new byte[4096];
-          int byteLength ;
-          while((byteLength = serverRead.read(buffer)) > 0){
-              outputStream.write(buffer,0,byteLength);
-          }
-           System.out.println("Gửi tệp hoàn tất.");
-
-
-        serverRead.close();
-        outputStream.close();
-
-       }catch(Exception e){
-           System.out.println("Error from server" +e.getMessage());
-           System.out.println("Cause from server" +e.getCause());
-       }
+        new ServerMain("Server");
     }
+
+    @Override
+    public void actionPerformed(ActionEvent e) {
+        if (e.getSource() == btnChoose) {
+            JFileChooser fileChooser = new JFileChooser();
+            fileChooser.setDialogTitle("Chọn một file để gửi");
+            int result = fileChooser.showOpenDialog(this);
+            if (result == JFileChooser.APPROVE_OPTION) {
+                selectedFile = fileChooser.getSelectedFile();
+                txtFile.setText(selectedFile.getName());
+                System.out.println("Selected file: " + selectedFile.getAbsolutePath());
+            }
+        } else if (e.getSource() == btnSend) {
+            int portServer;
+            if (!txtPort.getText().trim().isEmpty()) {
+                portServer = Integer.parseInt(txtPort.getText().trim());
+                // Sử dụng SwingWorker cho socket server và chuyển file
+                new SwingWorker<Void, Void>() {
+                    @Override
+                    protected Void doInBackground() {
+                        try {
+                            ServerSocket serverSocket = new ServerSocket(portServer);
+                            System.out.println("Server đã được tạo. Đang chờ kết nối từ client......");
+                            Socket socket = serverSocket.accept();
+
+                            SenderFile senderFile = new SenderFile(selectedFile, socket);
+                            senderFile.start();
+                            senderFile.join();
+
+                            String filePathReceive = "E:\\DuAnTruongHoc\\Ky5\\TransferFile\\FileServerReceive\\";
+                            ReceiveFile receiveFile = new ReceiveFile(filePathReceive, socket);
+                            receiveFile.start();
+                            receiveFile.join();
+
+                        } catch (Exception ex) {
+                            System.out.println("Error from server main " + ex.getMessage());
+                        }
+                        return null;
+                    }
+
+                    @Override
+                    protected void done() {
+                        JOptionPane.showMessageDialog(ServerMain.this, "Chuyển file hoàn tất.");
+                    }
+                }.execute();
+            } else {
+                System.out.println("Vui lòng nhập cổng server");
+            }
+        }
+    }
+
 }

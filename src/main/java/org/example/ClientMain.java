@@ -1,78 +1,150 @@
 package org.example;
 
+import javax.swing.*;
+import java.awt.*;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.io.*;
 import java.net.*;
 
-public class ClientMain {
+public class ClientMain extends JFrame implements ActionListener {
+
+    public JLabel lbPort,lbIP;
+    public   JTextField txtPort, txtIP,txtFile;
+    public JPanel pnPort, pnIP,pnBottom, pnTotal;
+    public JButton btnConnect,btnChoose,btnSend;
+    public File selectedFile;
+    public Socket socket;
+
+    public void GUI(){
+
+        lbPort = new JLabel("PORT: ");
+        lbIP = new JLabel("IP");
+        txtPort = new JTextField(10);
+        txtIP = new JTextField(10);
+        txtFile = new JTextField();
+        txtFile.setPreferredSize(new Dimension(200,30));
+
+        btnConnect = new JButton("Connect");
+        btnConnect.addActionListener(this);
+
+        btnChoose = new JButton("Choose");
+        btnChoose.addActionListener(this);
+
+        btnSend = new JButton("Send");
+        btnSend.addActionListener(this);
+
+
+
+        pnPort = new JPanel(new FlowLayout(10,10,10));
+        pnIP = new JPanel(new FlowLayout(10,10,10));
+        pnBottom = new JPanel(new FlowLayout(10));
+        pnTotal = new JPanel(new BorderLayout());
+
+        pnPort.add(lbPort);
+        pnPort.add(txtPort);
+
+        pnIP.add(lbIP);
+        pnIP.add(txtIP);
+        pnIP.add(btnConnect);
+
+
+        pnBottom.add(btnChoose);
+        pnBottom.add(txtFile);
+        pnBottom.add(btnSend);
+
+        pnTotal.add(pnPort,BorderLayout.NORTH);
+        pnTotal.add(pnIP,BorderLayout.CENTER);
+
+
+
+        pnTotal.add(pnBottom,BorderLayout.SOUTH);
+
+        add(pnTotal);
+        setBounds(200, 200, 500, 350);
+        setVisible(true);
+
+    }
+
+    public ClientMain(String st){
+        super(st);
+        GUI();
+    }
+
     public static void main(String[] args) {
-        String filePathReceive = "E:\\DuAnTruongHoc\\Ky5\\TransferFile\\";
+        new ClientMain("Client");
+    }
+
+    public   void getFileTransfer( String ipServer,int PortServer){
+        String filePathReceive = "E:\\DuAnTruongHoc\\Ky5\\TransferFile\\FileClientReceive\\";
 
         try{
-            Socket socket = new Socket("localhost",9999);
-
-            InputStream inputStream = socket.getInputStream();
-            BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream));// Dùng để nhận tên tệp
-
-
-
-
-
-           String fileName = reader.readLine();
-           System.out.println("Client nhận tên tệp : "+fileName);
-
-
-            File saveFile = new File(filePathReceive + fileName);
-            if(saveFile.exists()){
-
-//                String newNameFile = createNewFile(fileName);
-//                saveFive = new File(filePathReceive + newNameFile);
-                String newNameFile = createNewFile(saveFile);
-                saveFile = new File(filePathReceive + newNameFile);
-
-
-            }
-
-
-            BufferedOutputStream writeToReceiveFile = new BufferedOutputStream(new FileOutputStream(saveFile));
-
-           byte[] readByte = new byte[4096];
-           int byteLength;
-           while( (byteLength = inputStream.read(readByte) ) > 0){
-               writeToReceiveFile.write(readByte,0,byteLength);
-
-           }
-
-           writeToReceiveFile.close();
-           inputStream.close();
+            socket = new Socket(ipServer,PortServer);
+            ReceiveFile receiveFile = new ReceiveFile(filePathReceive,socket);
+            receiveFile.start();
+            receiveFile.join();
 
         }catch (Exception e){
-           System.out.println("Error from client " + e.getMessage());
+            System.out.println("Error from client " + e.getMessage());
         }
     }
 
-    public static String createNewFile(File oldFile){
-        String newName ="";
-        String fileInfo = oldFile.getName();
-        String nameOldFile ="";
-        String extensionOldFile = "";
 
-        for(int i = 0 ;i < fileInfo.length() ;i++){
-            if(fileInfo.charAt(i) == '.'){
-                nameOldFile = fileInfo.substring(0,i);
-                extensionOldFile = fileInfo.substring(i);
-                break;
+    @Override
+    public void actionPerformed(ActionEvent e) {
+        if (e.getSource() == btnConnect) {
+            int PortServer = Integer.parseInt(txtPort.getText().trim());
+            String ipServer = txtIP.getText().trim();
+            txtFile.setText("No file chosen");
+            // Sử dụng SwingWorker cho chuyển file
+            new SwingWorker<Void, Void>() {
+                @Override
+                protected Void doInBackground() {
+                    getFileTransfer(ipServer, PortServer);
+                    return null;
+                }
+
+                @Override
+                protected void done() {
+                    JOptionPane.showMessageDialog(ClientMain.this, "Chuyển file hoàn tất.");
+                }
+            }.execute();
+        } else if (e.getSource() == btnChoose) {
+            JFileChooser fileChooser = new JFileChooser();
+            fileChooser.setDialogTitle("Chọn một file để gửi");
+            int result = fileChooser.showOpenDialog(this);
+            if (result == JFileChooser.APPROVE_OPTION) {
+                selectedFile = fileChooser.getSelectedFile();
+                txtFile.setText(selectedFile.getName());
+                System.out.println("Selected file: " + selectedFile.getAbsolutePath());
+            }
+        } else if (e.getSource() == btnSend) {
+            if (selectedFile != null) {
+                // Sử dụng SwingWorker cho gửi file
+                new SwingWorker<Void, Void>() {
+                    @Override
+                    protected Void doInBackground() {
+                        try {
+                            SenderFile senderFile = new SenderFile(selectedFile, socket);
+                            senderFile.start();
+                            senderFile.join();
+                        } catch (Exception ex) {
+                            System.out.println("Error from client Main Action Performed: " + ex.getMessage());
+                        }
+                        return null;
+                    }
+
+                    @Override
+                    protected void done() {
+                        JOptionPane.showMessageDialog(ClientMain.this, "File đã được gửi thành công.");
+                    }
+                }.execute();
+            } else {
+                JOptionPane.showMessageDialog(this, "Vui lòng chọn một file trước.");
             }
         }
-
-        int counter = 1;
-        do{
-            newName="";
-            newName += nameOldFile + "_"+counter + extensionOldFile;
-            counter++;
-        }while(new File(oldFile.getParent(),newName).exists()); // nếu file tồn tại thì tiếp tục lặp counter
-
-        return newName;
     }
+
 }
