@@ -31,55 +31,51 @@ public class ReceiveFile extends Thread{
     }
 
     public static void getFile(String filePathReceive, Socket socket){
-
-        try{
+        try {
             InputStream inputStream = socket.getInputStream();
-            BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream));// Dùng để nhận tên tệp
+            BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream));
 
+            // Nhận tên tệp
             String fileName = reader.readLine();
-            System.out.println("Client nhận tên tệp : "+fileName);
+            System.out.println("Client nhận tên tệp : " + fileName);
 
-
+            // Nhận kích thước tệp
+            long expectedFileSize = Long.parseLong(reader.readLine());
+            System.out.println("Kích thước tệp dự kiến: " + expectedFileSize + " bytes");
 
             File saveFile = new File(filePathReceive + fileName);
-            if(saveFile.exists()){
-
-//                String newNameFile = createNewFile(fileName);
-//                saveFive = new File(filePathReceive + newNameFile);
+            if (saveFile.exists()) {
                 String newNameFile = createNewFile(saveFile);
                 saveFile = new File(filePathReceive + newNameFile);
-
-
             }
-
-
-//            BufferedOutputStream writeToReceiveFile = new BufferedOutputStream(new FileOutputStream(saveFile));
-//
-//            byte[] readByte = new byte[4096];
-//            int byteLength;
-//            while( (byteLength = inputStream.read(readByte) ) > 0){
-//                writeToReceiveFile.write(readByte,0,byteLength);
-//
-//            }
-//
-//            writeToReceiveFile.close();
-//            inputStream.close();
 
             try (BufferedOutputStream writeToReceiveFile = new BufferedOutputStream(new FileOutputStream(saveFile))) {
                 byte[] readByte = new byte[4096];
                 int byteLength;
-                while ((byteLength = inputStream.read(readByte)) !=-1) {
-                    writeToReceiveFile.write(readByte, 0, byteLength);
-                }
-                writeToReceiveFile.flush();  // Đảm bảo toàn bộ dữ liệu được ghi
-                System.out.println("Đã nhận tệp thành công.");
+                long totalBytesReceived = 0; // Tổng số byte đã nhận
 
+                while ((byteLength = inputStream.read(readByte)) != -1) {
+                    writeToReceiveFile.write(readByte, 0, byteLength);
+                    totalBytesReceived += byteLength; // Cập nhật tổng số byte đã nhận
+
+                    // Kiểm tra kích thước đã nhận
+                    if (totalBytesReceived >= expectedFileSize) {
+                        break; // Thoát khỏi vòng lặp nếu đã nhận đủ kích thước
+                    }
+                }
+                writeToReceiveFile.flush(); // Đảm bảo toàn bộ dữ liệu được ghi
+
+                // Kiểm tra nếu kích thước nhận được không khớp với kích thước dự kiến
+                if (totalBytesReceived == expectedFileSize) {
+                    System.out.println("Đã nhận tệp thành công.");
+                } else {
+                    System.out.println("Kích thước tệp không khớp! Kích thước nhận được: " + totalBytesReceived + ", Kích thước dự kiến: " + expectedFileSize);
+                }
             } catch (IOException e) {
                 System.out.println("Lỗi khi ghi tệp: " + e.getMessage());
             }
-
-        }catch (Exception e){
-            System.out.println("Lỗi từ ReceiveFile " + e.getMessage());
+        } catch (Exception e) {
+            System.out.println("Lỗi từ ReceiveFile: " + e.getMessage());
         }
 
     }

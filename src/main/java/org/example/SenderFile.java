@@ -5,7 +5,6 @@ import java.net.*;
 import java.util.*;
 
 public class SenderFile extends Thread{
-
     private File fileSend;
     private Socket socket;
 
@@ -34,37 +33,34 @@ public class SenderFile extends Thread{
     }
 
     public static void SocketSend(File fileSend, Socket socket){
-
-        try{
-            // Dùng để đọc tên tệp
-            // File file = new File(filePath);
+        try {
             BufferedInputStream serverRead = new BufferedInputStream(new FileInputStream(fileSend));
-
-            // Tao outputStream de gui du lieu di
             OutputStream outputStream = socket.getOutputStream();
 
+            PrintWriter printWriter = new PrintWriter(outputStream, true);
 
-            PrintWriter printWriter = new PrintWriter(outputStream,true);
+            // Gửi tên tệp
             printWriter.println(fileSend.getName());
-            System.out.println("Gửi TÊN tệp hoàn tất.....");
+
+            // Gửi kích thước tệp
+            long fileSize = fileSend.length();
+            printWriter.println(fileSize);
+            System.out.println("Gửi TÊN tệp và KÍCH THƯỚC hoàn tất.....");
 
             byte[] buffer = new byte[4096];
-            int byteLength ;
-            while((byteLength = serverRead.read(buffer)) !=-1){
-                outputStream.write(buffer,0,byteLength);
+            int byteLength;
+            long totalBytesSent = 0;
+
+            while ((byteLength = serverRead.read(buffer)) != -1) {
+                outputStream.write(buffer, 0, byteLength);
+                totalBytesSent += byteLength; // Cập nhật tổng số byte đã gửi
             }
-            System.out.println("Gửi tệp hoàn tất.");
+            outputStream.flush(); // Đảm bảo toàn bộ dữ liệu được gửi
 
-//            printWriter.close();
-//            serverRead.close();
-//            outputStream.close();
-            outputStream.flush();  // Đảm bảo toàn bộ dữ liệu được gửi
-            System.out.println("Đã gửi tệp thành công.");
-
-
-        }catch(Exception e){
-            System.out.println("Error from SenderFile" +e.getMessage());
-            System.out.println("Cause from SenderFile" +e.getCause());
+            System.out.println("Đã gửi tệp thành công. Tổng số byte đã gửi: " + totalBytesSent);
+        } catch (Exception e) {
+            System.out.println("Error from SenderFile: " + e.getMessage());
+            System.out.println("Cause from SenderFile: " + e.getCause());
         }
 
     }

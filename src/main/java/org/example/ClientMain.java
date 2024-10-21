@@ -16,8 +16,9 @@ public class ClientMain extends JFrame implements ActionListener {
     public JPanel pnPort, pnIP,pnBottom, pnTotal;
     public JButton btnConnect,btnChoose,btnSend;
     public File selectedFile;
-    public Socket socket;
-
+    public static Socket socket;
+    public static String filePathReceive = "E:\\DuAnTruongHoc\\Ky5\\TransferFile\\FileClientReceive\\";
+    public static  boolean isConnected = false;
     public void GUI(){
 
         lbPort = new JLabel("PORT: ");
@@ -73,78 +74,95 @@ public class ClientMain extends JFrame implements ActionListener {
         GUI();
     }
 
-    public static void main(String[] args) {
+    public static void main(String[] args) throws InterruptedException {
         new ClientMain("Client");
-    }
 
-    public   void getFileTransfer( String ipServer,int PortServer){
-        String filePathReceive = "E:\\DuAnTruongHoc\\Ky5\\TransferFile\\FileClientReceive\\";
-
-        try{
-            socket = new Socket(ipServer,PortServer);
-            ReceiveFile receiveFile = new ReceiveFile(filePathReceive,socket);
-            receiveFile.start();
-            receiveFile.join();
-
-        }catch (Exception e){
-            System.out.println("Error from client " + e.getMessage());
+        while(true){
+            Thread.sleep(200);
+            if(isConnected) break;
         }
+
+        new Thread(() -> {
+            while (isConnected && socket != null && !socket.isClosed()) {
+                ReceiveFile receiveFile = new ReceiveFile(filePathReceive, socket);
+                receiveFile.start();
+                try {
+                    receiveFile.join(); // Đợi quá trình nhận file hoàn tất trước khi lắng nghe file tiếp theo
+                } catch (InterruptedException e) {
+                    throw new RuntimeException(e);
+                }
+            }
+        }).start();
+
+
     }
+
+//    public   void getFileTransfer( String ipServer,int PortServer){
+//        String filePathReceive = "E:\\DuAnTruongHoc\\Ky5\\TransferFile\\FileClientReceive\\";
+//
+//        try {
+//            socket = new Socket(ipServer, PortServer);
+//            System.out.println("Connected to server. Listening for files...");
+//
+//            // Keep listening for incoming files as long as the socket is open.
+//            while (!socket.isClosed()) {
+//                ReceiveFile receiveFile = new ReceiveFile(filePathReceive, socket);
+//                receiveFile.start();
+//                receiveFile.join(); // Wait for the file transfer to complete.
+//            }
+//        } catch (Exception e) {
+//            System.out.println("Error from client: " + e.getMessage());
+//        }
+//    }
+
+
 
 
     @Override
     public void actionPerformed(ActionEvent e) {
         if (e.getSource() == btnConnect) {
-            int PortServer = Integer.parseInt(txtPort.getText().trim());
-            String ipServer = txtIP.getText().trim();
-            txtFile.setText("No file chosen");
-            // Sử dụng SwingWorker cho chuyển file
-            new SwingWorker<Void, Void>() {
-                @Override
-                protected Void doInBackground() {
-                    getFileTransfer(ipServer, PortServer);
-                    return null;
-                }
 
-                @Override
-                protected void done() {
-                    JOptionPane.showMessageDialog(ClientMain.this, "Chuyển file hoàn tất.");
+            // btnConnect.setEnabled(false);
+            if(!txtPort.getText().trim().isEmpty() && !txtIP.getText().trim().isEmpty()) {
+                int portServer = Integer.parseInt(txtPort.getText().trim());
+                String ipServer = txtIP.getText().trim();
+                try {
+                    socket = new Socket(ipServer,portServer);
+                    isConnected = true;
+                    btnConnect.setEnabled(false);
+                } catch (IOException ex) {
+                    throw new RuntimeException(ex);
                 }
-            }.execute();
+            }
+
+
         } else if (e.getSource() == btnChoose) {
+
             JFileChooser fileChooser = new JFileChooser();
-            fileChooser.setDialogTitle("Chọn một file để gửi");
+            fileChooser.setDialogTitle("Choose a file to send");
             int result = fileChooser.showOpenDialog(this);
             if (result == JFileChooser.APPROVE_OPTION) {
                 selectedFile = fileChooser.getSelectedFile();
                 txtFile.setText(selectedFile.getName());
-                System.out.println("Selected file: " + selectedFile.getAbsolutePath());
             }
-        } else if (e.getSource() == btnSend) {
-            if (selectedFile != null) {
-                // Sử dụng SwingWorker cho gửi file
-                new SwingWorker<Void, Void>() {
-                    @Override
-                    protected Void doInBackground() {
-                        try {
-                            SenderFile senderFile = new SenderFile(selectedFile, socket);
-                            senderFile.start();
-                            senderFile.join();
-                        } catch (Exception ex) {
-                            System.out.println("Error from client Main Action Performed: " + ex.getMessage());
-                        }
-                        return null;
-                    }
 
-                    @Override
-                    protected void done() {
-                        JOptionPane.showMessageDialog(ClientMain.this, "File đã được gửi thành công.");
-                    }
-                }.execute();
+        } else if (e.getSource() == btnSend) {
+
+            if (isConnected && selectedFile != null) {
+                SenderFile senderFile = new SenderFile(selectedFile, socket);
+                senderFile.start();
+                try {
+                    senderFile.join(); // Wait for the file sending to complete
+                    System.out.println("Sent file: " + selectedFile.getName());
+                } catch (InterruptedException ex) {
+                    throw new RuntimeException(ex);
+                }
             } else {
-                JOptionPane.showMessageDialog(this, "Vui lòng chọn một file trước.");
+                System.out.println("No file selected or not connected to server.");
             }
+
         }
     }
+
 
 }

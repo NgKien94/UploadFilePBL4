@@ -3,16 +3,20 @@ package org.example;
 import javax.swing.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.io.*;
-import java.net.*;
-import java.util.*;
+import java.io.File;
+import java.io.IOException;
+import java.net.ServerSocket;
+import java.net.Socket;
 import java.awt.*;
 
 public class ServerMain extends JFrame implements ActionListener {
 
-    public TextField txtPort, txtFile;
-    public JButton btnChoose, btnSend;
+    private static TextField txtPort, txtFile;
+    private JButton btnChoose, btnSend,btnInit;
     private File selectedFile;
+    private static  ServerSocket serverSocket;// Server socket thành thuộc tính
+    private static Socket socket;
+    private static boolean isConnected = false;
 
     public void GUI() {
         JLabel labelPort;
@@ -22,11 +26,11 @@ public class ServerMain extends JFrame implements ActionListener {
         txtPort = new TextField(15);
         btnChoose = new JButton("Choose");
         btnChoose.addActionListener(this);
-
+        btnInit = new JButton("Init Server");
+        btnInit.addActionListener(this);
         txtFile = new TextField(15);
         btnSend = new JButton("Send file");
         btnSend.addActionListener(this);
-
 
         pnTop = new JPanel(new FlowLayout(10));
         pnCenter = new JPanel(new FlowLayout(40, 40, 40));
@@ -34,6 +38,8 @@ public class ServerMain extends JFrame implements ActionListener {
 
         pnTop.add(labelPort);
         pnTop.add(txtPort);
+        pnTop.add(btnInit);
+
 
         pnCenter.add(btnChoose);
         pnCenter.add(txtFile);
@@ -45,17 +51,36 @@ public class ServerMain extends JFrame implements ActionListener {
         add(pnTotal);
         setBounds(200, 200, 500, 350);
         setVisible(true);
-
     }
 
     public ServerMain(String st) {
-
         super(st);
         GUI();
     }
 
-    public static void main(String[] args) {
+    public static void main(String[] args) throws IOException, InterruptedException {
         new ServerMain("Server");
+
+        String filePathReceive = "E:\\DuAnTruongHoc\\Ky5\\TransferFile\\FileServerReceive\\";
+
+        while(true){
+            Thread.sleep(200);
+            if(isConnected) break;
+        }
+
+        new Thread(() -> {
+            while (isConnected && socket != null && !socket.isClosed()) {
+                ReceiveFile receiveFile = new ReceiveFile(filePathReceive, socket);
+                receiveFile.start();
+                try {
+                    receiveFile.join(); // Wait for the file reception to complete
+                    System.out.println("Received file from client.");
+                } catch (InterruptedException e) {
+                    throw new RuntimeException(e);
+                }
+            }
+        }).start();
+
     }
 
     @Override
@@ -69,43 +94,50 @@ public class ServerMain extends JFrame implements ActionListener {
                 txtFile.setText(selectedFile.getName());
                 System.out.println("Selected file: " + selectedFile.getAbsolutePath());
             }
-        } else if (e.getSource() == btnSend) {
-            int portServer;
-            if (!txtPort.getText().trim().isEmpty()) {
-                portServer = Integer.parseInt(txtPort.getText().trim());
-                // Sử dụng SwingWorker cho socket server và chuyển file
-                new SwingWorker<Void, Void>() {
-                    @Override
-                    protected Void doInBackground() {
-                        try {
-                            ServerSocket serverSocket = new ServerSocket(portServer);
-                            System.out.println("Server đã được tạo. Đang chờ kết nối từ client......");
-                            Socket socket = serverSocket.accept();
+        }
+        else  if (e.getSource() == btnSend)
+        {
 
-                            SenderFile senderFile = new SenderFile(selectedFile, socket);
-                            senderFile.start();
-                            senderFile.join();
+            /*
+            Server Main tạo serversocket ở bên ngoài và khi connect được với client sẽ giữ một socket để duy tri
+            Gửi và nhận file sẽ trên socket đó
 
-                            String filePathReceive = "E:\\DuAnTruongHoc\\Ky5\\TransferFile\\FileServerReceive\\";
-                            ReceiveFile receiveFile = new ReceiveFile(filePathReceive, socket);
-                            receiveFile.start();
-                            receiveFile.join();
+             */
 
-                        } catch (Exception ex) {
-                            System.out.println("Error from server main " + ex.getMessage());
-                        }
-                        return null;
-                    }
-
-                    @Override
-                    protected void done() {
-                        JOptionPane.showMessageDialog(ServerMain.this, "Chuyển file hoàn tất.");
-                    }
-                }.execute();
+            if (socket != null && selectedFile != null) {
+                // Tạo luồng gửi file và bắt đầu gửi
+                SenderFile senderFile = new SenderFile(selectedFile, socket);
+                senderFile.start();
+                try {
+                    senderFile.join(); // Đợi quá trình gửi hoàn tất
+                    System.out.println("Đã gửi file: " + selectedFile.getName());
+                } catch (InterruptedException ex) {
+                    throw new RuntimeException(ex);
+                }
             } else {
-                System.out.println("Vui lòng nhập cổng server");
+                System.out.println("Chưa chọn file hoặc chưa kết nối client");
+            }
+
+
+        }
+        else if(e.getSource() == btnInit){
+            if(txtPort.getText().trim() !=""){
+                int portServer = Integer.parseInt(txtPort.getText().toString().trim());
+                try {
+                    serverSocket = new ServerSocket(portServer);
+                    System.out.println("Server đã được tạo ");
+                    socket = serverSocket.accept();
+                    if(socket != null){
+                        isConnected = true;
+                        btnInit.setEnabled(false);
+                    }
+
+                } catch (IOException ex) {
+                    throw new RuntimeException(ex);
+                }
             }
         }
     }
+
 
 }
