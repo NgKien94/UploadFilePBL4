@@ -70,6 +70,12 @@ public class ServerMain extends JFrame implements ActionListener {
 
         new Thread(() -> {
             while (isConnected && socket != null && !socket.isClosed()) {
+                try {
+                    Thread.sleep(500);
+                } catch (InterruptedException ex) {
+                    throw new RuntimeException(ex);
+                }
+
                 ReceiveFile receiveFile = new ReceiveFile(filePathReceive, socket);
                 receiveFile.start();
                 try {
@@ -106,6 +112,11 @@ public class ServerMain extends JFrame implements ActionListener {
 
             if (socket != null && selectedFile != null) {
                 // Tạo luồng gửi file và bắt đầu gửi
+                try {
+                    Thread.sleep(500);
+                } catch (InterruptedException ex) {
+                    throw new RuntimeException(ex);
+                }
                 SenderFile senderFile = new SenderFile(selectedFile, socket);
                 senderFile.start();
                 try {

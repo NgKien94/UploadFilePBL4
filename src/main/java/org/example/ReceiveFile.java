@@ -50,19 +50,17 @@ public class ReceiveFile extends Thread{
             }
 
             try (BufferedOutputStream writeToReceiveFile = new BufferedOutputStream(new FileOutputStream(saveFile))) {
-                byte[] readByte = new byte[4096];
+                byte[] readByte = new byte[65536];
                 int byteLength;
                 long totalBytesReceived = 0; // Tổng số byte đã nhận
 
-                while ((byteLength = inputStream.read(readByte)) != -1) {
-                    writeToReceiveFile.write(readByte, 0, byteLength);
-                    totalBytesReceived += byteLength; // Cập nhật tổng số byte đã nhận
 
-                    // Kiểm tra kích thước đã nhận
-                    if (totalBytesReceived >= expectedFileSize) {
-                        break; // Thoát khỏi vòng lặp nếu đã nhận đủ kích thước
-                    }
+
+                while (totalBytesReceived < expectedFileSize && (byteLength = inputStream.read(readByte)) != -1) {
+                    writeToReceiveFile.write(readByte, 0, byteLength);
+                    totalBytesReceived += byteLength;
                 }
+
                 writeToReceiveFile.flush(); // Đảm bảo toàn bộ dữ liệu được ghi
 
                 // Kiểm tra nếu kích thước nhận được không khớp với kích thước dự kiến
@@ -105,8 +103,8 @@ public class ReceiveFile extends Thread{
     }
 
     @Override
-    public void run() {
-        //super.run();
+    public synchronized void run() {
+
         getFile(filePathReceive,socket);
     }
 }

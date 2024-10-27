@@ -47,7 +47,7 @@ public class SenderFile extends Thread{
             printWriter.println(fileSize);
             System.out.println("Gửi TÊN tệp và KÍCH THƯỚC hoàn tất.....");
 
-            byte[] buffer = new byte[4096];
+            byte[] buffer = new byte[65536];
             int byteLength;
             long totalBytesSent = 0;
 
@@ -55,6 +55,8 @@ public class SenderFile extends Thread{
                 outputStream.write(buffer, 0, byteLength);
                 totalBytesSent += byteLength; // Cập nhật tổng số byte đã gửi
             }
+            serverRead.close();
+
             outputStream.flush(); // Đảm bảo toàn bộ dữ liệu được gửi
 
             System.out.println("Đã gửi tệp thành công. Tổng số byte đã gửi: " + totalBytesSent);
@@ -66,7 +68,8 @@ public class SenderFile extends Thread{
     }
 
     @Override
-    public void run() {
+    public synchronized void run() {
+
         SocketSend(fileSend,socket);
     }
 }
