@@ -17,7 +17,7 @@ public class ClientMain extends JFrame implements ActionListener {
     public JButton btnConnect,btnChoose,btnSend;
     public File selectedFile;
     public static Socket socket;
-    public static String filePathReceive = "E:\\DuAnTruongHoc\\Ky5\\TransferFile\\FileClientReceive\\";
+    public static String filePathReceive = "//home//giapwibu//";
     public static  boolean isConnected = false;
     public void GUI(){
 

@@ -35,30 +35,26 @@ public class SenderFile extends Thread{
     public static void SocketSend(File fileSend, Socket socket){
         try {
             BufferedInputStream serverRead = new BufferedInputStream(new FileInputStream(fileSend));
-            OutputStream outputStream = socket.getOutputStream();
-
-            PrintWriter printWriter = new PrintWriter(outputStream, true);
+            DataOutputStream outputStream = new DataOutputStream(socket.getOutputStream());
 
             // Gửi tên tệp
-            printWriter.println(fileSend.getName());
+            outputStream.writeUTF(fileSend.getName());
 
             // Gửi kích thước tệp
             long fileSize = fileSend.length();
-            printWriter.println(fileSize);
+            outputStream.writeLong(fileSize);
             System.out.println("Gửi TÊN tệp và KÍCH THƯỚC hoàn tất.....");
 
-            byte[] buffer = new byte[65536];
-            int byteLength;
+            byte[] buffer = new byte[4096];
+            int byteLength = 0;
             long totalBytesSent = 0;
 
             while ((byteLength = serverRead.read(buffer)) != -1) {
                 outputStream.write(buffer, 0, byteLength);
                 totalBytesSent += byteLength; // Cập nhật tổng số byte đã gửi
             }
-            serverRead.close();
 
             outputStream.flush(); // Đảm bảo toàn bộ dữ liệu được gửi
-
             System.out.println("Đã gửi tệp thành công. Tổng số byte đã gửi: " + totalBytesSent);
         } catch (Exception e) {
             System.out.println("Error from SenderFile: " + e.getMessage());
